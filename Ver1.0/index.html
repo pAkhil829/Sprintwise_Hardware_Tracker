@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprintwise Hardware Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="ambient-bubble bubble-1"></div>
+    <div class="ambient-bubble bubble-2"></div>
+    <div class="ambient-bubble bubble-3"></div>
+
+    <div class="app-layout">
+        
+        <header class="top-nav bubble-panel">
+            <div class="nav-left">
+                <div class="logo-icon">⚡</div>
+                <h1>Sprintwise Hardware Tracker</h1>
+            </div>
+            
+            <div class="nav-center">
+                <div class="search-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="global-sn-search" class="glossy-input" placeholder="Trace Board S/N (Press Enter)...">
+                </div>
+            </div>
+
+            <div class="nav-right">
+                <button id="theme-toggle" class="icon-btn" aria-label="Toggle Theme"></button>
+            </div>
+        </header>
+
+        <div class="bento-grid">
+            
+            <aside class="bento-sidebar">
+                
+                <div class="bubble-panel welcome-card">
+                    <h2>Tracking Controls</h2>
+                    <div class="action-buttons">
+                        <button id="new-sprint-trigger" class="btn-bubble btn-primary">➕ New Sprint</button>
+                        <button id="add-item-trigger" class="btn-bubble btn-secondary" style="display: none;">📦 Log Resource</button>
+                        <button id="export-btn" class="btn-bubble btn-outline">📥 Export Sprint Data</button>
+                    </div>
+                </div>
+
+                <div class="bubble-panel sprint-card" id="sidebar-sprint-info" style="display: none;">
+                    <div class="sprint-header-info">
+                        <span class="stat-label">Active Sprint Environment</span>
+                        <h3 id="sidebar-sprint-name" class="highlight-text">Loading...</h3>
+                        <p id="sidebar-sprint-dates" class="text-muted" style="margin-bottom: 15px;">--/--/---- to --/--/----</p>
+                    </div>
+                    <div class="sprint-actions">
+                        <button id="edit-sprint-trigger" class="btn-action" style="width: 100%;">✏️ Edit Sprint Dates</button>
+                        <button id="end-sprint-trigger" class="btn-action btn-danger" style="width: 100%;">⏹️ End Sprint</button>
+                    </div>
+                </div>
+
+            </aside>
+
+            <main class="bento-main">
+                
+                <div class="top-stats-row" id="top-stats-row" style="display: none;">
+                    <div class="big-stat-card bubble-panel stat-total">
+                        <span class="stat-label">Total Resources Logged</span>
+                        <h2 id="big-stat-total" class="massive-text highlight-text">0</h2>
+                    </div>
+                    <div id="stat-card-pending" class="big-stat-card bubble-panel stat-pending clickable-stat" title="Click to filter pending items">
+                        <span class="stat-label">Pending Returns</span>
+                        <h2 id="stat-not-returned" class="massive-text">0</h2>
+                    </div>
+                    <div id="stat-card-returned" class="big-stat-card bubble-panel stat-returned clickable-stat" title="Click to filter returned items">
+                        <span class="stat-label">Successfully Returned</span>
+                        <h2 id="stat-returned" class="massive-text">0</h2>
+                    </div>
+                </div>
+
+                <div class="bubble-panel data-card">
+                    <nav class="stage-tabs">
+                        <button class="tab-btn active" id="tab-btn-current">Active Dashboard</button>
+                        <button class="tab-btn" id="tab-btn-inventory">Ownership Inventory</button>
+                        <button class="tab-btn" id="tab-btn-backlog">Unreturned Backlog</button>
+                        <button class="tab-btn" id="tab-btn-history">System Archives</button>
+                    </nav>
+
+                    <section id="tab-current" class="tab-content active-tab fade-in">
+                        <div id="empty-state" class="empty-state">
+                            <div class="empty-icon">🫧</div>
+                            <h2>System Idle</h2>
+                            <p>Initialize a new sprint to begin logging hardware.</p>
+                        </div>
+
+                        <div id="active-table-container" style="display: none;">
+                            <div class="filter-bar" id="dynamic-filter-bar"></div>
+
+                            <div class="table-responsive">
+                                <table class="bubbly-table">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px;">SNO</th>
+                                            <th>Resource Info</th>
+                                            <th>Board Specs & Status</th>
+                                            <th>Borrower & Team</th>
+                                            <th>Shared Date</th>
+                                            <th>Status (Due)</th>
+                                            <th>Remarks</th>
+                                            <th style="width: 110px;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="current-list"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="tab-inventory" class="tab-content fade-in" style="display: none;">
+                        <div class="inventory-header">
+                            <div>
+                                <h2 style="margin: 0; font-size: 18px;">Master Board Ownership</h2>
+                                <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-secondary);">Click 'Total Owned' to manage S/Ns. Inventory tracks Boards only.</p>
+                            </div>
+                            <div style="display:flex; gap: 10px;">
+                                <button id="export-inv-btn" class="btn-bubble btn-outline" style="width: auto; padding: 10px 20px;">📥 Export Stock</button>
+                                <button id="add-inventory-trigger" class="btn-bubble btn-primary" style="width: auto; padding: 10px 20px;">➕ Update Stock</button>
+                            </div>
+                        </div>
+                        <div id="dynamic-inventory-container" style="margin-top: 10px;"></div>
+                    </section>
+
+                    <section id="tab-backlog" class="tab-content fade-in" style="display: none;">
+                        <div class="inventory-header">
+                            <div>
+                                <h2 style="margin: 0; font-size: 18px;">Unreturned Resource Backlog</h2>
+                                <p style="margin: 5px 0 0 0; font-size: 12px; color: var(--text-secondary);">Resources from archived sprints that have not been returned.</p>
+                            </div>
+                        </div>
+                        
+                        <div id="backlog-empty-state" class="empty-state">
+                            <div class="empty-icon">✅</div>
+                            <h2>All Clear</h2>
+                            <p>There are no unreturned items from past sprints.</p>
+                        </div>
+
+                        <div id="backlog-table-container" class="table-responsive" style="margin-top: 15px; display: none;">
+                            <table class="bubbly-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;">SNO</th>
+                                        <th>Original Sprint</th>
+                                        <th>Resource Info</th>
+                                        <th>Borrower & Team</th>
+                                        <th>Shared Date</th>
+                                        <th>Expected Return</th>
+                                        <th>Remarks</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="backlog-list"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <section id="tab-history" class="tab-content fade-in" style="display: none;">
+                        <div class="inventory-header">
+                            <div class="history-filter">
+                                <select id="history-select" class="glossy-input" style="min-width: 300px;">
+                                    <option value="">-- Select Past Archive --</option>
+                                </select>
+                            </div>
+                            <button id="add-archive-item-btn" class="btn-bubble btn-secondary" style="width: auto; padding: 10px 20px; display: none;">➕ Log to Archive</button>
+                        </div>
+
+                        <div id="history-table-container" class="table-responsive" style="margin-top: 15px; display: none;">
+                            <table class="bubbly-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40px;">SNO</th>
+                                        <th>Resource Info</th>
+                                        <th>Board Specs & Status</th>
+                                        <th>Borrower & Team</th>
+                                        <th>Shared Date</th>
+                                        <th>Status</th>
+                                        <th>Remarks</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-list"></tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <div id="sprint-modal" class="modal-overlay">
+        <div class="bubble-modal">
+            <h2 id="sprint-modal-title">Sprint Config</h2>
+            <div class="form-group">
+                <label>Sprint Designation</label>
+                <input type="text" id="sprint-name" class="glossy-input" placeholder="e.g., Sprint 14">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" id="sprint-start" class="glossy-input">
+                </div>
+                <div class="form-group">
+                    <label>End Date</label>
+                    <input type="date" id="sprint-end" class="glossy-input">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button id="cancel-sprint-btn" class="btn-text">Cancel</button>
+                <button id="save-sprint-btn" class="btn-bubble btn-primary">Execute</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="missing-inv-modal" class="modal-overlay">
+        <div class="bubble-modal modal-sm">
+            <h2>Stock Warning</h2>
+            <p id="missing-inv-msg" style="font-size: 14px; line-height: 1.5; color: var(--text-primary);">You are trying to log a board that doesn't exist in your Master Inventory.</p>
+            <p class="text-muted" style="font-size: 13px; margin-bottom: 20px;">Would you like to automatically add this to your inventory to track ownership?</p>
+            <div class="modal-actions">
+                <button id="missing-inv-no" class="btn-text">No, just log it</button>
+                <button id="missing-inv-yes" class="btn-bubble btn-primary">Yes, add to Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="sn-collision-modal" class="modal-overlay">
+        <div class="bubble-modal modal-sm">
+            <h2>Multiple Boards Found</h2>
+            <p style="font-size: 14px; line-height: 1.5; color: var(--text-secondary); margin-bottom: 15px;">The Serial Number <strong id="collision-sn-display" class="highlight-text"></strong> is registered under multiple board types. Which one do you want to trace?</p>
+            <div id="collision-options-container" style="display: flex; flex-direction: column; gap: 10px;"></div>
+            <div class="modal-actions" style="margin-top: 20px;">
+                <button id="close-collision-btn" class="btn-text">Cancel Search</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="search-modal" class="modal-overlay">
+        <div class="bubble-modal">
+            <h2>S/N Trace Results</h2>
+            <h3 id="search-query-display" class="highlight-text" style="margin-top: 0;"></h3>
+            <div id="search-results-content" style="margin-top: 20px; line-height: 1.6; max-height: 50vh; overflow-y: auto;"></div>
+            <div class="modal-actions">
+                <button id="close-search-btn" class="btn-bubble btn-outline">Close Trace</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="inventory-modal" class="modal-overlay">
+        <div class="bubble-modal">
+            <h2 id="inventory-modal-title">Update Stock</h2>
+            <p class="text-muted" style="margin-bottom: 20px; font-size: 13px;">Select a board, then enter quantities for applicable regions. Leave 0 for unused regions.</p>
+            
+            <div class="form-group">
+                <label>Board Name (Select or Type New)</label>
+                <input type="text" id="inv-board-name" class="glossy-input" list="board-datalist" placeholder="e.g., SoC Name">
+            </div>
+            
+            <div class="form-group">
+                <label>Regional Stock Counts</label>
+                <div id="region-inputs-container" class="region-grid"></div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="cancel-inv-btn" class="btn-text">Cancel</button>
+                <button id="save-inv-btn" class="btn-bubble btn-primary">Save Global Stock</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="manage-sn-modal" class="modal-overlay">
+        <div class="bubble-modal">
+            <h2 id="manage-sn-title">Manage Board S/Ns</h2>
+            <p id="manage-sn-subtitle" class="text-muted" style="margin-bottom: 20px;">Add physical board serial numbers to trace them.</p>
+            
+            <div class="form-group" style="display: flex; gap: 10px;">
+                <input type="text" id="new-sn-input" class="glossy-input" placeholder="Enter new S/N...">
+                <button id="add-sn-btn" class="btn-bubble btn-secondary" style="width: auto; padding: 10px 20px;">Add</button>
+            </div>
+
+            <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                <table class="bubbly-table">
+                    <thead>
+                        <tr>
+                            <th>Serial Number (S/N)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sn-list-container"></tbody>
+                </table>
+            </div>
+
+            <div class="modal-actions">
+                <button id="close-sn-btn" class="btn-bubble btn-primary">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shared-details-modal" class="modal-overlay">
+        <div class="bubble-modal">
+            <h2 id="shared-details-title">Shared Boards Detail</h2>
+            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                <table class="bubbly-table">
+                    <thead>
+                        <tr>
+                            <th>SNO</th>
+                            <th>Borrower</th>
+                            <th>Team</th>
+                            <th>Qty</th>
+                            <th>Due Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="shared-details-list"></tbody>
+                </table>
+            </div>
+            <div class="modal-actions">
+                <button id="close-shared-btn" class="btn-bubble btn-primary" style="width: auto; padding: 10px 24px;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="item-modal" class="modal-overlay">
+        <div class="bubble-modal">
+            <h2 id="item-modal-title">Log Resource</h2>
+            <p id="item-modal-subtitle" class="text-muted" style="margin-top: -15px; margin-bottom: 20px; font-size: 13px;"></p>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="item-category" class="glossy-input">
+                        <option value="Board">TV's boards</option>
+                        <option value="Device">Device</option>
+                        <option value="Personal">Personal</option>
+                    </select>
+                </div>
+                <div class="form-group" id="global-health-group" style="display: none;">
+                    <label>Current Health</label>
+                    <select id="item-health" class="glossy-input">
+                        <option value="Working">Working</option>
+                        <option value="Not Working">Not Working</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="board-fields-container">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Board Name</label>
+                        <input type="text" id="item-type" class="glossy-input" list="board-datalist" placeholder="e.g., SoC Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Region</label>
+                        <select id="item-region" class="glossy-input"></select>
+                        <div id="region-other-group" style="display: none; margin-top: 10px;">
+                            <input type="text" id="item-region-other" class="glossy-input highlight-input" placeholder="Specify region...">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Board Details (S/N & Condition)</label>
+                    <div id="dynamic-board-inputs" class="dynamic-inputs-container"></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Quantity</label>
+                    <input type="number" id="item-quantity" class="glossy-input" min="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label id="item-info-label">Additional Specs/Details</label>
+                    <input type="text" id="item-info" class="glossy-input" placeholder="e.g., 3rd Gen Device">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Borrower Name</label>
+                    <input type="text" id="borrower-name" class="glossy-input" placeholder="e.g., John Doe">
+                </div>
+                <div class="form-group">
+                    <label>Team Name</label>
+                    <input type="text" id="team-name" class="glossy-input" placeholder="e.g., WebOS UI">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Shared Date</label>
+                    <input type="date" id="shared-date" class="glossy-input">
+                </div>
+                <div class="form-group">
+                    <label>Expected Return</label>
+                    <input type="date" id="return-date" class="glossy-input">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Remarks</label>
+                <input type="text" id="item-remarks" class="glossy-input" placeholder="Optional notes...">
+            </div>
+
+            <div class="modal-actions">
+                <button id="cancel-item-btn" class="btn-text">Cancel</button>
+                <button id="add-item-btn" class="btn-bubble btn-primary">Save Resource</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="return-modal" class="modal-overlay">
+        <div class="bubble-modal modal-sm">
+            <h2>Mark as Returned</h2>
+            <div class="form-group">
+                <label>Actual Return Date</label>
+                <input type="date" id="actual-return-date" class="glossy-input">
+            </div>
+            
+            <div id="return-boards-container" class="form-group">
+                </div>
+
+            <div class="modal-actions">
+                <button id="cancel-return-btn" class="btn-text">Cancel</button>
+                <button id="confirm-return-btn" class="btn-bubble btn-primary">Confirm Return</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="export-modal" class="modal-overlay">
+        <div class="bubble-modal">
+            <h2 id="export-modal-title">Export Custom CSV</h2>
+            
+            <div class="form-group">
+                <label>1. Select Data Source</label>
+                <select id="export-sprint-select" class="glossy-input">
+                    <option value="all">All Available Sprints</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label>2. Select Columns to Export</label>
+                <div class="checkbox-grid" id="export-columns-container">
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="sno" checked> SNO</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="sprintName" checked> Sprint Name</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="category" checked> Category/Board</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="region" checked> Region</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="quantity" checked> Quantity</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="boardNumbers" checked> Board S/N & Status</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="itemDetails" checked> Item Details</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="borrower" checked> Borrower</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="team" checked> Team</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="sharedDate" checked> Shared Date</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="expectedReturn" checked> Expected Return</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="actualReturn" checked> Actual Return</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="status" checked> Status</label>
+                    <label class="chk-container"><input type="checkbox" class="col-checkbox" value="remarks" checked> Remarks</label>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button id="cancel-export-btn" class="btn-text">Cancel</button>
+                <button id="confirm-export-btn" class="btn-bubble btn-primary">Download CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
